@@ -5,6 +5,8 @@ import {
   type Category, type InsertCategory,
   type Bid, type InsertBid
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, gte, lte, desc, gt } from "drizzle-orm";
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -35,36 +37,20 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private auctions: Map<number, Auction>;
-  private categories: Map<number, Category>;
-  private bids: Map<number, Bid>;
-  private currentUserId: number;
-  private currentAuctionId: number;
-  private currentCategoryId: number;
-  private currentBidId: number;
-
+export class DatabaseStorage implements IStorage {
   constructor() {
-    this.users = new Map();
-    this.auctions = new Map();
-    this.categories = new Map();
-    this.bids = new Map();
-    this.currentUserId = 1;
-    this.currentAuctionId = 1;
-    this.currentCategoryId = 1;
-    this.currentBidId = 1;
-    
     this.initializeData();
   }
 
   private async initializeData() {
-    await this.loadData();
     await this.initializeDefaultCategories();
     await this.initializeSampleData();
   }
 
   private async initializeDefaultCategories() {
+    const existingCategories = await this.getCategories();
+    if (existingCategories.length > 0) return;
+
     const defaultCategories = [
       { name: "Automobiles", description: "Cars, motorcycles, and automotive items" },
       { name: "Antiques", description: "Vintage and antique collectibles" },
@@ -75,251 +61,259 @@ export class MemStorage implements IStorage {
     ];
 
     for (const cat of defaultCategories) {
-      if (this.categories.size === 0) {
-        await this.createCategory(cat);
-      }
+      await this.createCategory(cat);
     }
   }
 
   private async initializeSampleData() {
-    // Only initialize sample data if there are no existing auctions
-    if (this.auctions.size > 0) return;
-
-    // Create sample users
-    const sampleUsers = [
-      {
-        username: "john_collector",
-        password: "password123",
-        firstName: "John",
-        lastName: "Smith",
-        email: "john@example.com",
-        shippingAddress: "123 Main St, New York, NY 10001",
-        creditCardInfo: "****-****-****-1234",
-        phoneNumber: "(555) 123-4567"
-      },
-      {
-        username: "vintage_seller",
-        password: "password123",
-        firstName: "Sarah",
-        lastName: "Johnson",
-        email: "sarah@example.com",
-        shippingAddress: "456 Oak Ave, Los Angeles, CA 90210",
-        creditCardInfo: "****-****-****-5678",
-        phoneNumber: "(555) 987-6543"
-      }
-    ];
-
-    const users = [];
-    for (const userData of sampleUsers) {
-      const user = await this.createUser(userData);
-      users.push(user);
+    // Check if data already exists
+    const existingUsers = await this.getAllUsers();
+    if (existingUsers.length > 0) {
+      console.log('Sample data already exists, skipping initialization');
+      return;
     }
 
+    console.log('Initializing sample data...');
+
+    // Create sample users
+    const johnCollector = await this.createUser({
+      username: "john_collector",
+      email: "john@example.com",
+      password: "password123",
+      firstName: "John",
+      lastName: "Collector",
+      shippingAddress: "123 Main St, New York, NY 10001",
+      creditCardInfo: "****-****-****-1234",
+      phoneNumber: "555-0123",
+    });
+
+    const vintageSeller = await this.createUser({
+      username: "vintage_seller",
+      email: "vintage@example.com",
+      password: "password123",
+      firstName: "Vintage",
+      lastName: "Seller",
+      shippingAddress: "456 Oak Ave, Los Angeles, CA 90210",
+      creditCardInfo: "****-****-****-5678",
+      phoneNumber: "555-0456",
+    });
+
+    // Get categories for sample auctions
+    const categories = await this.getCategories();
+    const automobilesCat = categories.find(c => c.name === "Automobiles");
+    const antiquesCat = categories.find(c => c.name === "Antiques");
+    const jewelryCat = categories.find(c => c.name === "Jewelry");
+    const watchesCat = categories.find(c => c.name === "Watches");
+    const electronicsCat = categories.find(c => c.name === "Electronics");
+
     // Create sample auctions
-    const sampleAuctions = [
+    const auctionsData = [
       {
-        title: "Vintage Rolex Submariner Watch",
-        description: "1960s Rolex Submariner in excellent condition. Recently serviced with original box and papers. This is a rare collector's piece with beautiful patina.",
-        categoryId: 4, // Watches
-        sellerId: users[0].id,
-        startingBid: "2500.00",
-        reservePrice: "5000.00",
+        title: "Classic 1967 Ford Mustang Fastback",
+        description: "Beautifully restored 1967 Ford Mustang Fastback with original 289 V8 engine. Rare Wimbledon White exterior with black interior. Numbers matching and fully documented restoration.",
+        startingBid: "15000",
+        categoryId: automobilesCat!.id,
+        sellerId: vintageSeller.id,
         duration: 7,
-        imageUrl: "https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=400&h=400&fit=crop&crop=faces"
       },
       {
-        title: "MacBook Pro M3 14-inch (2024)",
-        description: "Brand new MacBook Pro with M3 chip, 16GB RAM, 512GB SSD. Still in original packaging with all accessories. Perfect for professionals and creatives.",
-        categoryId: 6, // Electronics
-        sellerId: users[1].id,
-        startingBid: "1800.00",
-        reservePrice: "2200.00",
+        title: "Victorian Era Silver Tea Set",
+        description: "Exquisite Victorian era sterling silver tea set, circa 1890. Four-piece set including teapot, cream pitcher, sugar bowl, and serving tray. Hallmarked and in excellent condition.",
+        startingBid: "1200",
+        categoryId: antiquesCat!.id,
+        sellerId: vintageSeller.id,
         duration: 5,
-        imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop&crop=faces"
       },
       {
-        title: "Antique Victorian Mahogany Writing Desk",
-        description: "Beautiful 19th century mahogany writing desk with brass handles and secret compartments. Restored to original condition. Perfect for home office or study.",
-        categoryId: 2, // Antiques
-        sellerId: users[0].id,
-        startingBid: "800.00",
-        reservePrice: "1500.00",
-        duration: 10,
-        imageUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop&crop=faces"
-      },
-      {
-        title: "Diamond Engagement Ring 2.5 Carat",
-        description: "Stunning 2.5 carat diamond engagement ring in platinum setting. Certified diamond with excellent cut, clarity, and color. Comes with appraisal certificate.",
-        categoryId: 3, // Jewelry
-        sellerId: users[1].id,
-        startingBid: "8000.00",
-        reservePrice: "12000.00",
-        duration: 7,
-        imageUrl: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop&crop=faces"
-      },
-      {
-        title: "Tesla Model Y Long Range (2023)",
-        description: "Like new Tesla Model Y with only 5,000 miles. Full self-driving capability, premium interior, and all latest updates. Still under warranty.",
-        categoryId: 1, // Automobiles
-        sellerId: users[0].id,
-        startingBid: "45000.00",
-        reservePrice: "52000.00",
-        duration: 14,
-        imageUrl: "https://images.unsplash.com/photo-1561580125-028ee3bd62eb?w=400&h=400&fit=crop&crop=faces"
-      },
-      {
-        title: "Professional Garden Tool Set",
-        description: "Complete professional-grade garden tool set with stainless steel tools, ergonomic handles, and carrying case. Perfect for serious gardeners.",
-        categoryId: 5, // Home & Garden
-        sellerId: users[1].id,
-        startingBid: "150.00",
-        reservePrice: "300.00",
+        title: "Diamond Engagement Ring - 2.5 Carat",
+        description: "Stunning 2.5 carat diamond engagement ring in platinum setting. GIA certified diamond with excellent cut, VS1 clarity, and F color grade. Size 6, can be resized.",
+        startingBid: "8500",
+        categoryId: jewelryCat!.id,
+        sellerId: johnCollector.id,
         duration: 3,
-        imageUrl: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&crop=faces"
-      }
+      },
+      {
+        title: "Rolex Submariner Date - Black",
+        description: "Pre-owned Rolex Submariner Date (ref. 116610LN) in excellent condition. Black dial and bezel, automatic movement. Complete with box and papers. Purchased in 2020.",
+        startingBid: "12000",
+        categoryId: watchesCat!.id,
+        sellerId: johnCollector.id,
+        duration: 10,
+      },
+      {
+        title: "Apple MacBook Pro 16-inch M1 Max",
+        description: "Like-new Apple MacBook Pro 16-inch with M1 Max chip, 32GB RAM, 1TB SSD. Space Gray color. Perfect for professional work. Includes original charger and box.",
+        startingBid: "2800",
+        categoryId: electronicsCat!.id,
+        sellerId: vintageSeller.id,
+        duration: 2,
+      },
+      {
+        title: "Antique Grandfather Clock - Working",
+        description: "Beautiful antique grandfather clock from the early 1900s. Westminster chimes, working pendulum, and original key. Solid oak construction with beveled glass. Recently serviced.",
+        startingBid: "3500",
+        categoryId: antiquesCat!.id,
+        sellerId: johnCollector.id,
+        duration: 8,
+      },
     ];
 
-    for (const auctionData of sampleAuctions) {
-      await this.createAuction(auctionData);
+    const createdAuctions: Auction[] = [];
+    for (const auction of auctionsData) {
+      const created = await this.createAuction(auction);
+      createdAuctions.push(created);
     }
 
     // Add some sample bids
-    const auctions = Array.from(this.auctions.values());
-    if (auctions.length > 0) {
-      // Add bids to the first few auctions
-      await this.createBid({
-        auctionId: auctions[0].id,
-        bidderId: users[1].id,
-        amount: "2600.00",
-        shippingAddress: users[1].shippingAddress
-      });
+    const bidsData = [
+      { auctionId: createdAuctions[0].id, bidderId: johnCollector.id, amount: "15500", shippingAddress: "123 Main St, New York, NY 10001" },
+      { auctionId: createdAuctions[0].id, bidderId: vintageSeller.id, amount: "16000", shippingAddress: "456 Oak Ave, Los Angeles, CA 90210" },
+      { auctionId: createdAuctions[1].id, bidderId: johnCollector.id, amount: "1350", shippingAddress: "123 Main St, New York, NY 10001" },
+      { auctionId: createdAuctions[2].id, bidderId: vintageSeller.id, amount: "9000", shippingAddress: "456 Oak Ave, Los Angeles, CA 90210" },
+      { auctionId: createdAuctions[3].id, bidderId: vintageSeller.id, amount: "12500", shippingAddress: "456 Oak Ave, Los Angeles, CA 90210" },
+      { auctionId: createdAuctions[4].id, bidderId: johnCollector.id, amount: "2900", shippingAddress: "123 Main St, New York, NY 10001" },
+    ];
 
-      await this.createBid({
-        auctionId: auctions[1].id,
-        bidderId: users[0].id,
-        amount: "1850.00",
-        shippingAddress: users[0].shippingAddress
-      });
-
-      await this.createBid({
-        auctionId: auctions[0].id,
-        bidderId: users[1].id,
-        amount: "2750.00",
-        shippingAddress: users[1].shippingAddress
-      });
+    for (const bid of bidsData) {
+      await this.createBid(bid);
     }
+
+    const users = await this.getAllUsers();
+    const auctions = await this.getAuctions();
 
     console.log(`Initialized sample data: ${users.length} users, ${auctions.length} auctions`);
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const user: User = {
-      ...insertUser,
-      id: this.currentUserId++,
-      createdAt: new Date(),
-    };
-    this.users.set(user.id, user);
-    await this.saveData();
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   async getCategories(): Promise<Category[]> {
-    return Array.from(this.categories.values());
+    return await db.select().from(categories);
   }
 
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
-    const category: Category = {
-      ...insertCategory,
-      id: this.currentCategoryId++,
-    };
-    this.categories.set(category.id, category);
-    await this.saveData();
+    const [category] = await db
+      .insert(categories)
+      .values(insertCategory)
+      .returning();
     return category;
   }
 
   async getAuctions(categoryId?: number, searchTerm?: string): Promise<AuctionWithDetails[]> {
-    let auctionList = Array.from(this.auctions.values());
-    
+    let query = db
+      .select({
+        auction: auctions,
+        category: categories,
+        seller: users,
+      })
+      .from(auctions)
+      .innerJoin(categories, eq(auctions.categoryId, categories.id))
+      .innerJoin(users, eq(auctions.sellerId, users.id));
+
     if (categoryId) {
-      auctionList = auctionList.filter(auction => auction.categoryId === categoryId);
+      query = query.where(eq(auctions.categoryId, categoryId));
     }
+
+    const results = await query;
     
+    let filteredResults = results;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      auctionList = auctionList.filter(auction => 
-        auction.title.toLowerCase().includes(term) ||
-        auction.description.toLowerCase().includes(term)
+      filteredResults = results.filter(result => 
+        result.auction.title.toLowerCase().includes(term) ||
+        result.auction.description.toLowerCase().includes(term)
       );
     }
 
     const auctionsWithDetails: AuctionWithDetails[] = [];
     
-    for (const auction of auctionList) {
-      const category = this.categories.get(auction.categoryId);
-      const seller = this.users.get(auction.sellerId);
-      
-      if (category && seller) {
-        const bidsForAuction = Array.from(this.bids.values())
-          .filter(bid => bid.auctionId === auction.id)
-          .sort((a, b) => Number(b.amount) - Number(a.amount));
-        
-        let highestBid;
-        if (bidsForAuction.length > 0) {
-          const bidder = this.users.get(bidsForAuction[0].bidderId);
-          if (bidder) {
-            highestBid = { ...bidsForAuction[0], bidder };
-          }
-        }
+    for (const result of filteredResults) {
+      // Get highest bid for this auction
+      const bidResults = await db
+        .select({
+          bid: bids,
+          bidder: users,
+        })
+        .from(bids)
+        .innerJoin(users, eq(bids.bidderId, users.id))
+        .where(eq(bids.auctionId, result.auction.id))
+        .orderBy(desc(bids.amount))
+        .limit(1);
 
-        auctionsWithDetails.push({
-          ...auction,
-          category,
-          seller,
-          highestBid,
-        });
+      let highestBid;
+      if (bidResults.length > 0) {
+        highestBid = { ...bidResults[0].bid, bidder: bidResults[0].bidder };
       }
+
+      auctionsWithDetails.push({
+        ...result.auction,
+        category: result.category,
+        seller: result.seller,
+        highestBid,
+      });
     }
 
     return auctionsWithDetails.sort((a, b) => b.endTime.getTime() - a.endTime.getTime());
   }
 
   async getAuction(id: number): Promise<AuctionWithDetails | undefined> {
-    const auction = this.auctions.get(id);
-    if (!auction) return undefined;
+    const results = await db
+      .select({
+        auction: auctions,
+        category: categories,
+        seller: users,
+      })
+      .from(auctions)
+      .innerJoin(categories, eq(auctions.categoryId, categories.id))
+      .innerJoin(users, eq(auctions.sellerId, users.id))
+      .where(eq(auctions.id, id))
+      .limit(1);
 
-    const category = this.categories.get(auction.categoryId);
-    const seller = this.users.get(auction.sellerId);
-    
-    if (!category || !seller) return undefined;
+    if (results.length === 0) return undefined;
 
-    const bidsForAuction = Array.from(this.bids.values())
-      .filter(bid => bid.auctionId === auction.id)
-      .sort((a, b) => Number(b.amount) - Number(a.amount));
-    
+    const result = results[0];
+
+    // Get highest bid for this auction
+    const bidResults = await db
+      .select({
+        bid: bids,
+        bidder: users,
+      })
+      .from(bids)
+      .innerJoin(users, eq(bids.bidderId, users.id))
+      .where(eq(bids.auctionId, id))
+      .orderBy(desc(bids.amount))
+      .limit(1);
+
     let highestBid;
-    if (bidsForAuction.length > 0) {
-      const bidder = this.users.get(bidsForAuction[0].bidderId);
-      if (bidder) {
-        highestBid = { ...bidsForAuction[0], bidder };
-      }
+    if (bidResults.length > 0) {
+      highestBid = { ...bidResults[0].bid, bidder: bidResults[0].bidder };
     }
 
     return {
-      ...auction,
-      category,
-      seller,
+      ...result.auction,
+      category: result.category,
+      seller: result.seller,
       highestBid,
     };
   }
@@ -329,75 +323,107 @@ export class MemStorage implements IStorage {
     const endTime = new Date();
     endTime.setDate(endTime.getDate() + duration);
 
-    const auction: Auction = {
-      ...insertAuction,
-      id: this.currentAuctionId++,
-      currentBid: insertAuction.startingBid,
-      bidCount: 0,
-      startTime: new Date(),
-      endTime,
-      isActive: true,
-    };
+    const [auction] = await db
+      .insert(auctions)
+      .values({
+        ...insertAuction,
+        currentBid: insertAuction.startingBid,
+        bidCount: 0,
+        startTime: new Date(),
+        endTime,
+        isActive: true,
+      })
+      .returning();
     
-    this.auctions.set(auction.id, auction);
-    await this.saveData();
     return auction;
   }
 
   async updateAuctionBid(auctionId: number, newBid: number): Promise<void> {
-    const auction = this.auctions.get(auctionId);
+    // Get current auction to increment bid count
+    const [auction] = await db.select().from(auctions).where(eq(auctions.id, auctionId));
     if (auction) {
-      auction.currentBid = newBid.toString() as any;
-      auction.bidCount++;
-      this.auctions.set(auctionId, auction);
-      await this.saveData();
+      await db
+        .update(auctions)
+        .set({
+          currentBid: newBid.toString(),
+          bidCount: auction.bidCount + 1,
+        })
+        .where(eq(auctions.id, auctionId));
     }
   }
 
   async getBidsForAuction(auctionId: number): Promise<(Bid & { bidder: User })[]> {
-    const auctionBids = Array.from(this.bids.values())
-      .filter(bid => bid.auctionId === auctionId)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    const results = await db
+      .select({
+        bid: bids,
+        bidder: users,
+      })
+      .from(bids)
+      .innerJoin(users, eq(bids.bidderId, users.id))
+      .where(eq(bids.auctionId, auctionId))
+      .orderBy(desc(bids.timestamp));
 
-    const bidsWithBidders: (Bid & { bidder: User })[] = [];
-    
-    for (const bid of auctionBids) {
-      const bidder = this.users.get(bid.bidderId);
-      if (bidder) {
-        bidsWithBidders.push({ ...bid, bidder });
-      }
-    }
-
-    return bidsWithBidders;
+    return results.map(result => ({ ...result.bid, bidder: result.bidder }));
   }
 
   async createBid(insertBid: InsertBid): Promise<Bid> {
-    const bid: Bid = {
-      ...insertBid,
-      id: this.currentBidId++,
-      timestamp: new Date(),
-    };
+    const [bid] = await db
+      .insert(bids)
+      .values({
+        ...insertBid,
+        timestamp: new Date(),
+      })
+      .returning();
     
-    this.bids.set(bid.id, bid);
     await this.updateAuctionBid(bid.auctionId, Number(bid.amount));
     return bid;
   }
 
   async getSoldItemsByDateRange(startDate: Date, endDate: Date): Promise<AuctionWithDetails[]> {
-    const soldAuctions = Array.from(this.auctions.values()).filter(auction => 
-      !auction.isActive && 
-      auction.endTime >= startDate && 
-      auction.endTime <= endDate &&
-      auction.bidCount > 0
-    );
+    const results = await db
+      .select({
+        auction: auctions,
+        category: categories,
+        seller: users,
+      })
+      .from(auctions)
+      .innerJoin(categories, eq(auctions.categoryId, categories.id))
+      .innerJoin(users, eq(auctions.sellerId, users.id))
+      .where(
+        and(
+          eq(auctions.isActive, false),
+          gte(auctions.endTime, startDate),
+          lte(auctions.endTime, endDate),
+          gt(auctions.bidCount, 0) // Greater than 0
+        )
+      );
 
     const soldWithDetails: AuctionWithDetails[] = [];
     
-    for (const auction of soldAuctions) {
-      const auctionWithDetails = await this.getAuction(auction.id);
-      if (auctionWithDetails) {
-        soldWithDetails.push(auctionWithDetails);
+    for (const result of results) {
+      // Get highest bid for this auction
+      const bidResults = await db
+        .select({
+          bid: bids,
+          bidder: users,
+        })
+        .from(bids)
+        .innerJoin(users, eq(bids.bidderId, users.id))
+        .where(eq(bids.auctionId, result.auction.id))
+        .orderBy(desc(bids.amount))
+        .limit(1);
+
+      let highestBid;
+      if (bidResults.length > 0) {
+        highestBid = { ...bidResults[0].bid, bidder: bidResults[0].bidder };
       }
+
+      soldWithDetails.push({
+        ...result.auction,
+        category: result.category,
+        seller: result.seller,
+        highestBid,
+      });
     }
 
     return soldWithDetails;
@@ -405,73 +431,57 @@ export class MemStorage implements IStorage {
 
   async getActiveAuctions(): Promise<AuctionWithDetails[]> {
     const now = new Date();
-    const activeAuctions = Array.from(this.auctions.values()).filter(auction => 
-      auction.isActive && auction.endTime > now
-    );
+    const results = await db
+      .select({
+        auction: auctions,
+        category: categories,
+        seller: users,
+      })
+      .from(auctions)
+      .innerJoin(categories, eq(auctions.categoryId, categories.id))
+      .innerJoin(users, eq(auctions.sellerId, users.id))
+      .where(
+        and(
+          eq(auctions.isActive, true),
+          gte(auctions.endTime, now)
+        )
+      );
 
     const activeWithDetails: AuctionWithDetails[] = [];
     
-    for (const auction of activeAuctions) {
-      const auctionWithDetails = await this.getAuction(auction.id);
-      if (auctionWithDetails) {
-        activeWithDetails.push(auctionWithDetails);
+    for (const result of results) {
+      // Get highest bid for this auction
+      const bidResults = await db
+        .select({
+          bid: bids,
+          bidder: users,
+        })
+        .from(bids)
+        .innerJoin(users, eq(bids.bidderId, users.id))
+        .where(eq(bids.auctionId, result.auction.id))
+        .orderBy(desc(bids.amount))
+        .limit(1);
+
+      let highestBid;
+      if (bidResults.length > 0) {
+        highestBid = { ...bidResults[0].bid, bidder: bidResults[0].bidder };
       }
+
+      activeWithDetails.push({
+        ...result.auction,
+        category: result.category,
+        seller: result.seller,
+        highestBid,
+      });
     }
 
     return activeWithDetails;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    return await db.select().from(users);
   }
 
-  private async saveData(): Promise<void> {
-    try {
-      const data = {
-        users: Array.from(this.users.entries()),
-        auctions: Array.from(this.auctions.entries()),
-        categories: Array.from(this.categories.entries()),
-        bids: Array.from(this.bids.entries()),
-        counters: {
-          userId: this.currentUserId,
-          auctionId: this.currentAuctionId,
-          categoryId: this.currentCategoryId,
-          bidId: this.currentBidId,
-        }
-      };
-
-      const dataDir = path.join(process.cwd(), 'data');
-      await fs.mkdir(dataDir, { recursive: true });
-      await fs.writeFile(
-        path.join(dataDir, 'auction_data.json'),
-        JSON.stringify(data, null, 2)
-      );
-    } catch (error) {
-      console.error('Error saving data:', error);
-    }
-  }
-
-  private async loadData(): Promise<void> {
-    try {
-      const dataPath = path.join(process.cwd(), 'data', 'auction_data.json');
-      const dataStr = await fs.readFile(dataPath, 'utf-8');
-      const data = JSON.parse(dataStr);
-
-      this.users = new Map(data.users || []);
-      this.auctions = new Map(data.auctions || []);
-      this.categories = new Map(data.categories || []);
-      this.bids = new Map(data.bids || []);
-
-      if (data.counters) {
-        this.currentUserId = data.counters.userId || 1;
-        this.currentAuctionId = data.counters.auctionId || 1;
-        this.currentCategoryId = data.counters.categoryId || 1;
-        this.currentBidId = data.counters.bidId || 1;
-      }
-    } catch (error) {
-      console.log('No existing data found, starting fresh');
-    }
-  }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
