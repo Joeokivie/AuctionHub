@@ -57,4 +57,7 @@ A sophisticated eBay-like auction platform built with modern web technologies fo
 - npm or yarn package manager
 
 ### Setup Instructions
-
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd auction-platform
