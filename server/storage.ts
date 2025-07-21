@@ -55,8 +55,13 @@ export class MemStorage implements IStorage {
     this.currentCategoryId = 1;
     this.currentBidId = 1;
     
-    this.initializeDefaultCategories();
-    this.loadData();
+    this.initializeData();
+  }
+
+  private async initializeData() {
+    await this.loadData();
+    await this.initializeDefaultCategories();
+    await this.initializeSampleData();
   }
 
   private async initializeDefaultCategories() {
@@ -74,6 +79,137 @@ export class MemStorage implements IStorage {
         await this.createCategory(cat);
       }
     }
+  }
+
+  private async initializeSampleData() {
+    // Only initialize sample data if there are no existing auctions
+    if (this.auctions.size > 0) return;
+
+    // Create sample users
+    const sampleUsers = [
+      {
+        username: "john_collector",
+        password: "password123",
+        firstName: "John",
+        lastName: "Smith",
+        email: "john@example.com",
+        shippingAddress: "123 Main St, New York, NY 10001",
+        creditCardInfo: "****-****-****-1234",
+        phoneNumber: "(555) 123-4567"
+      },
+      {
+        username: "vintage_seller",
+        password: "password123",
+        firstName: "Sarah",
+        lastName: "Johnson",
+        email: "sarah@example.com",
+        shippingAddress: "456 Oak Ave, Los Angeles, CA 90210",
+        creditCardInfo: "****-****-****-5678",
+        phoneNumber: "(555) 987-6543"
+      }
+    ];
+
+    const users = [];
+    for (const userData of sampleUsers) {
+      const user = await this.createUser(userData);
+      users.push(user);
+    }
+
+    // Create sample auctions
+    const sampleAuctions = [
+      {
+        title: "Vintage Rolex Submariner Watch",
+        description: "1960s Rolex Submariner in excellent condition. Recently serviced with original box and papers. This is a rare collector's piece with beautiful patina.",
+        categoryId: 4, // Watches
+        sellerId: users[0].id,
+        startingBid: "2500.00",
+        reservePrice: "5000.00",
+        duration: 7,
+        imageUrl: "https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=400&h=400&fit=crop&crop=faces"
+      },
+      {
+        title: "MacBook Pro M3 14-inch (2024)",
+        description: "Brand new MacBook Pro with M3 chip, 16GB RAM, 512GB SSD. Still in original packaging with all accessories. Perfect for professionals and creatives.",
+        categoryId: 6, // Electronics
+        sellerId: users[1].id,
+        startingBid: "1800.00",
+        reservePrice: "2200.00",
+        duration: 5,
+        imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop&crop=faces"
+      },
+      {
+        title: "Antique Victorian Mahogany Writing Desk",
+        description: "Beautiful 19th century mahogany writing desk with brass handles and secret compartments. Restored to original condition. Perfect for home office or study.",
+        categoryId: 2, // Antiques
+        sellerId: users[0].id,
+        startingBid: "800.00",
+        reservePrice: "1500.00",
+        duration: 10,
+        imageUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop&crop=faces"
+      },
+      {
+        title: "Diamond Engagement Ring 2.5 Carat",
+        description: "Stunning 2.5 carat diamond engagement ring in platinum setting. Certified diamond with excellent cut, clarity, and color. Comes with appraisal certificate.",
+        categoryId: 3, // Jewelry
+        sellerId: users[1].id,
+        startingBid: "8000.00",
+        reservePrice: "12000.00",
+        duration: 7,
+        imageUrl: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop&crop=faces"
+      },
+      {
+        title: "Tesla Model Y Long Range (2023)",
+        description: "Like new Tesla Model Y with only 5,000 miles. Full self-driving capability, premium interior, and all latest updates. Still under warranty.",
+        categoryId: 1, // Automobiles
+        sellerId: users[0].id,
+        startingBid: "45000.00",
+        reservePrice: "52000.00",
+        duration: 14,
+        imageUrl: "https://images.unsplash.com/photo-1561580125-028ee3bd62eb?w=400&h=400&fit=crop&crop=faces"
+      },
+      {
+        title: "Professional Garden Tool Set",
+        description: "Complete professional-grade garden tool set with stainless steel tools, ergonomic handles, and carrying case. Perfect for serious gardeners.",
+        categoryId: 5, // Home & Garden
+        sellerId: users[1].id,
+        startingBid: "150.00",
+        reservePrice: "300.00",
+        duration: 3,
+        imageUrl: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&crop=faces"
+      }
+    ];
+
+    for (const auctionData of sampleAuctions) {
+      await this.createAuction(auctionData);
+    }
+
+    // Add some sample bids
+    const auctions = Array.from(this.auctions.values());
+    if (auctions.length > 0) {
+      // Add bids to the first few auctions
+      await this.createBid({
+        auctionId: auctions[0].id,
+        bidderId: users[1].id,
+        amount: "2600.00",
+        shippingAddress: users[1].shippingAddress
+      });
+
+      await this.createBid({
+        auctionId: auctions[1].id,
+        bidderId: users[0].id,
+        amount: "1850.00",
+        shippingAddress: users[0].shippingAddress
+      });
+
+      await this.createBid({
+        auctionId: auctions[0].id,
+        bidderId: users[1].id,
+        amount: "2750.00",
+        shippingAddress: users[1].shippingAddress
+      });
+    }
+
+    console.log(`Initialized sample data: ${users.length} users, ${auctions.length} auctions`);
   }
 
   async getUser(id: number): Promise<User | undefined> {
