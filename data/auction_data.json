@@ -1,0 +1,21 @@
+{
+  "users": [],
+  "auctions": [],
+  "categories": [
+    [
+      1,
+      {
+        "name": "Automobiles",
+        "description": "Cars, motorcycles, and automotive items",
+        "id": 1
+      }
+    ]
+  ],
+  "bids": [],
+  "counters": {
+    "userId": 1,
+    "auctionId": 1,
+    "categoryId": 2,
+    "bidId": 1
+  }
+}
