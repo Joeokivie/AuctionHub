@@ -68,6 +68,10 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
 export const insertBidSchema = createInsertSchema(bids).omit({
   id: true,
   timestamp: true,
+}).extend({
+  amount: z.coerce.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+    message: "Amount must be a valid positive number"
+  })
 });
 
 export const loginSchema = z.object({

@@ -107,14 +107,16 @@ export class DatabaseStorage implements IStorage {
     const electronicsCat = categories.find(c => c.name === "Electronics");
 
     // Create sample auctions
+  
     const auctionsData = [
       {
         title: "Classic 1967 Ford Mustang Fastback",
-        description: "Beautifully restored 1967 Ford Mustang Fastback with original 289 V8 engine. Rare Wimbledon White exterior with black interior. Numbers matching and fully documented restoration.",
-        startingBid: "15000",
+        description: "Classic 1967 Ford Mustang Fastback with a 289 V8 engine and 4-speed manual transmission. Restored to original condition with new paint and interior.",
+        startingBid: "25000",
         categoryId: automobilesCat!.id,
         sellerId: vintageSeller.id,
         duration: 7,
+        endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
       {
         title: "Victorian Era Silver Tea Set",
@@ -123,6 +125,7 @@ export class DatabaseStorage implements IStorage {
         categoryId: antiquesCat!.id,
         sellerId: vintageSeller.id,
         duration: 5,
+        endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
       },
       {
         title: "Diamond Engagement Ring - 2.5 Carat",
@@ -131,6 +134,7 @@ export class DatabaseStorage implements IStorage {
         categoryId: jewelryCat!.id,
         sellerId: johnCollector.id,
         duration: 3,
+        endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       },
       {
         title: "Rolex Submariner Date - Black",
@@ -139,6 +143,7 @@ export class DatabaseStorage implements IStorage {
         categoryId: watchesCat!.id,
         sellerId: johnCollector.id,
         duration: 10,
+        endTime: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
       },
       {
         title: "Apple MacBook Pro 16-inch M1 Max",
@@ -147,6 +152,7 @@ export class DatabaseStorage implements IStorage {
         categoryId: electronicsCat!.id,
         sellerId: vintageSeller.id,
         duration: 2,
+        endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
       },
       {
         title: "Antique Grandfather Clock - Working",
@@ -155,6 +161,7 @@ export class DatabaseStorage implements IStorage {
         categoryId: antiquesCat!.id,
         sellerId: johnCollector.id,
         duration: 8,
+        endTime: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
       },
     ];
 
@@ -231,7 +238,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(users, eq(auctions.sellerId, users.id));
 
     if (categoryId) {
-      query = query.where(eq(auctions.categoryId, categoryId));
+      query = query.where(eq(auctions.categoryId, categoryId)) as any;
     }
 
     const results = await query;
@@ -481,7 +488,6 @@ export class DatabaseStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
-
 }
 
 export const storage = new DatabaseStorage();
