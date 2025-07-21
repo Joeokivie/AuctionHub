@@ -24,14 +24,28 @@ export default function Home() {
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
+    queryFn: async () => {
+      const response = await fetch('/api/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return response.json();
+    }
   });
 
   const { data: auctions = [], isLoading } = useQuery<AuctionWithDetails[]>({
     queryKey: ["/api/auctions", selectedCategory, searchTerm],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedCategory) params.append('categoryId', selectedCategory);
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await fetch(`/api/auctions?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch auctions');
+      return response.json();
+    }
   });
 
   // Filter and sort auctions
-  const filteredAuctions = auctions.filter(auction => {
+  const filteredAuctions = (Array.isArray(auctions) ? auctions : []).filter(auction => {
     const matchesPrice = (!priceMin || Number(auction.currentBid) >= Number(priceMin)) &&
                         (!priceMax || Number(auction.currentBid) <= Number(priceMax));
     return matchesPrice;
