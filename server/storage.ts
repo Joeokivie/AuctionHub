@@ -117,6 +117,7 @@ export class DatabaseStorage implements IStorage {
         sellerId: vintageSeller.id,
         duration: 7,
         endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        imageUrl: "/attached_assets/image_1753117659815.png",
       },
       {
         title: "Victorian Era Silver Tea Set",
@@ -126,6 +127,7 @@ export class DatabaseStorage implements IStorage {
         sellerId: vintageSeller.id,
         duration: 5,
         endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+        imageUrl: "/attached_assets/image_1753117688160.png",
       },
       {
         title: "Diamond Engagement Ring - 2.5 Carat",
@@ -135,6 +137,7 @@ export class DatabaseStorage implements IStorage {
         sellerId: johnCollector.id,
         duration: 3,
         endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        imageUrl: "/attached_assets/image_1753117719954.png",
       },
       {
         title: "Rolex Submariner Date - Black",
@@ -144,6 +147,7 @@ export class DatabaseStorage implements IStorage {
         sellerId: johnCollector.id,
         duration: 10,
         endTime: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        imageUrl: "/attached_assets/image_1753117880007.png",
       },
       {
         title: "Apple MacBook Pro 16-inch M1 Max",
@@ -153,6 +157,7 @@ export class DatabaseStorage implements IStorage {
         sellerId: vintageSeller.id,
         duration: 2,
         endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        imageUrl: "/attached_assets/image_1753117960865.png",
       },
       {
         title: "Antique Grandfather Clock - Working",
@@ -162,6 +167,7 @@ export class DatabaseStorage implements IStorage {
         sellerId: johnCollector.id,
         duration: 8,
         endTime: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
+        imageUrl: "/attached_assets/image_1753118009641.png",
       },
     ];
 
