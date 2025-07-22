@@ -271,6 +271,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete auction
+  app.delete("/api/auctions/:id", requireAuth, async (req, res) => {
+    try {
+      const auctionId = Number(req.params.id);
+      const auction = await storage.getAuction(auctionId);
+      
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+
+      // Only allow the seller to delete their own auction
+      if (auction.sellerId !== currentUser.id) {
+        return res.status(403).json({ message: "You can only delete your own auctions" });
+      }
+
+      // Don't allow deletion if there are bids (unless you want to allow this)
+      if (auction.bidCount > 0) {
+        return res.status(400).json({ message: "Cannot delete auction with existing bids" });
+      }
+
+      await storage.deleteAuction(auctionId);
+      res.json({ message: "Auction deleted successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to delete auction" });
+    }
+  });
+
   // Admin/Report routes
   app.get("/api/admin/reports/sales", requireAuth, async (req, res) => {
     try {

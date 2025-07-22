@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Filter } from "lucide-react";
+import { useCurrentUser } from "@/lib/auth";
 import type { AuctionWithDetails, Category } from "@shared/schema";
 
 export default function Home() {
@@ -23,6 +24,8 @@ export default function Home() {
   const [priceMax, setPriceMax] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
+  
+  const { data: currentUserData } = useCurrentUser();
 
   // Handle URL parameters for category selection and tab switching
   useEffect(() => {
@@ -289,7 +292,11 @@ export default function Home() {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {paginatedAuctions.map((auction) => (
-                      <AuctionCard key={auction.id} auction={auction} />
+                      <AuctionCard 
+                        key={auction.id} 
+                        auction={auction} 
+                        currentUser={currentUserData?.user} 
+                      />
                     ))}
                   </div>
 

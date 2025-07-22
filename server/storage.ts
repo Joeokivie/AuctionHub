@@ -26,6 +26,7 @@ export interface IStorage {
   getAuction(id: number): Promise<AuctionWithDetails | undefined>;
   createAuction(auction: InsertAuction & { duration: number }): Promise<Auction>;
   updateAuctionBid(auctionId: number, newBid: number): Promise<void>;
+  deleteAuction(id: number): Promise<void>;
   
   // Bid methods
   getBidsForAuction(auctionId: number): Promise<(Bid & { bidder: User })[]>;
@@ -494,6 +495,14 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+
+  async deleteAuction(id: number): Promise<void> {
+    // First delete all bids associated with this auction
+    await db.delete(bids).where(eq(bids.auctionId, id));
+    
+    // Then delete the auction itself
+    await db.delete(auctions).where(eq(auctions.id, id));
   }
 }
 
