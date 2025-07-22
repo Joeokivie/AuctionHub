@@ -81,6 +81,8 @@ export default function SellForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/active-auctions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
         title: "Auction created successfully!",
         description: "Your item has been listed for auction.",
