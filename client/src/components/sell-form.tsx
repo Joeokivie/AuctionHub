@@ -65,7 +65,20 @@ export default function SellForm() {
   });
 
   const createAuctionMutation = useMutation({
-    mutationFn: (data: SellFormData) => apiRequest("POST", "/api/auctions", data),
+    mutationFn: async (data: { formData: FormData }) => {
+      const response = await fetch('/api/auctions', {
+        method: 'POST',
+        body: data.formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create auction');
+      }
+      
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
       toast({
@@ -137,17 +150,27 @@ export default function SellForm() {
       return;
     }
 
-    // Use the image preview (base64) if file was uploaded, otherwise use URL field
-    const finalImageUrl = imagePreview || data.imageUrl || "";
-
-    const submitData = {
-      ...data,
-      sellerId: currentUser.user.id,
-      imageUrl: finalImageUrl,
-      reservePrice: data.reservePrice && data.reservePrice.trim() !== "" ? data.reservePrice : undefined,
-    };
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('title', data.title);
+    formData.append('description', data.description);
+    formData.append('categoryId', data.categoryId.toString());
+    formData.append('startingBid', data.startingBid);
+    formData.append('duration', data.duration.toString());
     
-    createAuctionMutation.mutate(submitData);
+    // Handle reserve price
+    if (data.reservePrice && data.reservePrice.trim() !== "") {
+      formData.append('reservePrice', data.reservePrice);
+    }
+    
+    // Handle image: file upload takes priority over URL
+    if (imageFile) {
+      formData.append('image', imageFile);
+    } else if (data.imageUrl && data.imageUrl.trim() !== "") {
+      formData.append('imageUrl', data.imageUrl);
+    }
+    
+    createAuctionMutation.mutate({ formData });
   };
 
   if (!currentUser) {

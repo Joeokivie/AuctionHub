@@ -1,5 +1,10 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import { v4 as uuidv4 } from "uuid";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { 
   insertUserSchema, 
@@ -13,6 +18,41 @@ let currentUser: any = null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const backupManager = new BackupManager();
+  
+  // Ensure uploads directory exists
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Configure multer for file uploads
+  const storage_multer = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
+      cb(null, uniqueName);
+    }
+  });
+
+  const upload = multer({
+    storage: storage_multer,
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept images only
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed!'));
+      }
+    }
+  });
+
+  // Serve uploaded files statically
+  app.use('/uploads', express.static(uploadsDir));
   
   // Authentication middleware
   const requireAuth = (req: any, res: any, next: any) => {
@@ -116,20 +156,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auctions", requireAuth, async (req, res) => {
+  // Image upload endpoint
+  app.post("/api/upload", requireAuth, upload.single('image'), async (req, res) => {
     try {
-      // Calculate end time based on duration
-      const { duration, reservePrice, ...auctionFields } = req.body;
-      const endTime = new Date(Date.now() + (duration || 7) * 24 * 60 * 60 * 1000);
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
       
-      // Handle empty reserve price
-      const cleanedReservePrice = reservePrice && reservePrice.trim() !== "" ? reservePrice : null;
+      const imageUrl = `/uploads/${req.file.filename}`;
+      res.json({ imageUrl });
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      res.status(400).json({ message: error.message || "Failed to upload image" });
+    }
+  });
+
+  app.post("/api/auctions", requireAuth, upload.single('image'), async (req, res) => {
+    try {
+      // Parse form data and convert types
+      const { 
+        title, 
+        description, 
+        categoryId, 
+        startingBid, 
+        duration, 
+        reservePrice, 
+        imageUrl 
+      } = req.body;
+      
+      // Convert string values to proper types
+      const parsedData = {
+        title,
+        description,
+        categoryId: parseInt(categoryId),
+        startingBid,
+        duration: parseInt(duration || "7"),
+        reservePrice: reservePrice && reservePrice.trim() !== "" ? reservePrice : null,
+        imageUrl: imageUrl || ""
+      };
+      
+      // Calculate end time based on duration
+      const endTime = new Date(Date.now() + parsedData.duration * 24 * 60 * 60 * 1000);
+      
+      // Handle image upload - file upload takes priority over URL
+      let finalImageUrl = parsedData.imageUrl;
+      if (req.file) {
+        finalImageUrl = `/uploads/${req.file.filename}`;
+      }
       
       const auctionData = insertAuctionSchema.parse({
-        ...auctionFields,
-        reservePrice: cleanedReservePrice,
+        title: parsedData.title,
+        description: parsedData.description,
+        categoryId: parsedData.categoryId,
+        startingBid: parsedData.startingBid,
+        reservePrice: parsedData.reservePrice,
+        duration: parsedData.duration,
+        imageUrl: finalImageUrl,
         sellerId: currentUser.id,
-        duration: duration || 7,
         endTime
       });
       
