@@ -47,7 +47,7 @@ export default function SellForm() {
       startingBid: z.string().min(1, "Starting bid is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
         message: "Starting bid must be a valid positive number"
       }),
-      reservePrice: z.string().optional().refine(val => !val || (!isNaN(parseFloat(val)) && parseFloat(val) > 0), {
+      reservePrice: z.string().optional().refine(val => !val || val.trim() === "" || (!isNaN(parseFloat(val)) && parseFloat(val) > 0), {
         message: "Reserve price must be a valid positive number"
       }),
       duration: z.number().min(1).max(30),
@@ -144,6 +144,7 @@ export default function SellForm() {
       ...data,
       sellerId: currentUser.user.id,
       imageUrl: finalImageUrl,
+      reservePrice: data.reservePrice && data.reservePrice.trim() !== "" ? data.reservePrice : undefined,
     };
     
     createAuctionMutation.mutate(submitData);

@@ -119,11 +119,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auctions", requireAuth, async (req, res) => {
     try {
       // Calculate end time based on duration
-      const { duration, ...auctionFields } = req.body;
+      const { duration, reservePrice, ...auctionFields } = req.body;
       const endTime = new Date(Date.now() + (duration || 7) * 24 * 60 * 60 * 1000);
+      
+      // Handle empty reserve price
+      const cleanedReservePrice = reservePrice && reservePrice.trim() !== "" ? reservePrice : null;
       
       const auctionData = insertAuctionSchema.parse({
         ...auctionFields,
+        reservePrice: cleanedReservePrice,
         sellerId: currentUser.id,
         duration: duration || 7,
         endTime
