@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import Header from "@/components/header";
 import AuctionCard from "@/components/auction-card";
 import SellForm from "@/components/sell-form";
@@ -13,6 +14,7 @@ import { Search, Filter } from "lucide-react";
 import type { AuctionWithDetails, Category } from "@shared/schema";
 
 export default function Home() {
+  const [location] = useLocation();
   const [activeTab, setActiveTab] = useState("browse");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -21,6 +23,16 @@ export default function Home() {
   const [priceMax, setPriceMax] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
+
+  // Handle URL parameters for category selection
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const categoryParam = urlParams.get('category');
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+      setActiveTab("browse");
+    }
+  }, [location]);
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],

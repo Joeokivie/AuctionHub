@@ -3,9 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Gavel, DollarSign, Users, HandMetal, FileText, List, Database, Download } from "lucide-react";
+import { Gavel, DollarSign, Users, HandMetal, FileText, List, Database, Download, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { AuctionWithDetails, User } from "@shared/schema";
+import { Link } from "wouter";
+import type { AuctionWithDetails, User, Category } from "@shared/schema";
 
 interface AdminStats {
   activeAuctions: number;
@@ -39,6 +40,11 @@ export default function AdminDashboard() {
 
   const { data: allUsers = [] } = useQuery<User[]>({
     queryKey: ["/api/admin/reports/users"],
+    enabled: !!currentUser,
+  });
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ["/api/categories"],
     enabled: !!currentUser,
   });
 
@@ -263,6 +269,41 @@ export default function AdminDashboard() {
               </div>
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Navigation */}
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Quick Navigation</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <Link href="/">
+              <Button variant="outline" className="w-full justify-start">
+                <List className="h-4 w-4 mr-2" />
+                All Auctions
+              </Button>
+            </Link>
+            {categories.slice(0, 3).map((category) => (
+              <Link key={category.id} href={`/?category=${category.id}`}>
+                <Button variant="outline" className="w-full justify-start">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  {category.name}
+                </Button>
+              </Link>
+            ))}
+          </div>
+          {categories.length > 3 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {categories.slice(3).map((category) => (
+                <Link key={category.id} href={`/?category=${category.id}`}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {category.name}
+                  </Button>
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
