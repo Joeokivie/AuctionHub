@@ -83,9 +83,18 @@ export default function Home() {
     currentPage * itemsPerPage
   );
 
-  const handleCategoryClick = (categoryName: string) => {
-    const category = categories.find(c => c.name === categoryName);
-    setSelectedCategory(category ? category.id.toString() : "");
+  const handleCategoryClick = (categoryNameOrId: string) => {
+    // Check if it's a numeric ID or a category name
+    const isNumericId = /^\d+$/.test(categoryNameOrId);
+    
+    if (isNumericId) {
+      // It's an ID, use it directly
+      setSelectedCategory(categoryNameOrId);
+    } else {
+      // It's a name, find the ID
+      const category = categories.find(c => c.name === categoryNameOrId);
+      setSelectedCategory(category ? category.id.toString() : "");
+    }
     setCurrentPage(1);
   };
 
