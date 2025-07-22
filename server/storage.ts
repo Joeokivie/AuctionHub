@@ -458,7 +458,8 @@ export class DatabaseStorage implements IStorage {
           eq(auctions.isActive, true),
           gte(auctions.endTime, now)
         )
-      );
+      )
+      .orderBy(desc(auctions.startTime));
 
     const activeWithDetails: AuctionWithDetails[] = [];
     
