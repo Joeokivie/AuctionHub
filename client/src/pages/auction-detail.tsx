@@ -32,7 +32,7 @@ export default function AuctionDetail() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiRequest(`/api/auctions/${id}`, 'DELETE'),
+    mutationFn: () => apiRequest('DELETE', '/api/auctions/' + id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
       toast({
