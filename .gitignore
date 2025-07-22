@@ -1,6 +1,43 @@
-node_modules
-dist
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Build outputs
+dist/
+build/
+
+# Development files
+.replit
+.upm
+replit.nix
+
+# Uploads directory (user content)
+uploads/*
+!uploads/.gitkeep
+
+# Data backups
+data/backups/
+
+# Temporary files
+cookies.txt
+*.tmp
+*.log
+
+# OS files
 .DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Runtime files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
