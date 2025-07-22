@@ -22,12 +22,16 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
               src={auction.imageUrl} 
               alt={auction.title}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                console.log('Image failed to load:', auction.imageUrl);
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
-              <Tag className="h-16 w-16" />
-            </div>
-          )}
+          ) : null}
+          <div className={`w-full h-full flex items-center justify-center text-gray-400 ${auction.imageUrl ? 'hidden' : ''}`}>
+            <Tag className="h-16 w-16" />
+          </div>
         </div>
       </Link>
       
