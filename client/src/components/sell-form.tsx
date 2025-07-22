@@ -198,7 +198,23 @@ export default function SellForm() {
     <div className="max-w-2xl mx-auto">
       <Card>
         <CardContent className="p-8">
-          <h2 className="text-2xl font-bold mb-6">List Your Item for Auction</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">List Your Item for Auction</h2>
+            <div className="flex gap-2">
+              <Link href="/?tab=browse">
+                <Button variant="outline" size="sm">
+                  <List className="h-4 w-4 mr-1" />
+                  Browse Auctions
+                </Button>
+              </Link>
+              <Link href="/?tab=admin">
+                <Button variant="outline" size="sm">
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Admin Dashboard
+                </Button>
+              </Link>
+            </div>
+          </div>
           
 
           

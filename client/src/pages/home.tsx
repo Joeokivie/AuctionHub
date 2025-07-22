@@ -24,13 +24,22 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  // Handle URL parameters for category selection
+  // Handle URL parameters for category selection and tab switching
   useEffect(() => {
     const urlParams = new URLSearchParams(location.split('?')[1] || '');
     const categoryParam = urlParams.get('category');
+    const tabParam = urlParams.get('tab');
+    
     if (categoryParam) {
       setSelectedCategory(categoryParam);
+    }
+    
+    if (tabParam === 'browse' || categoryParam) {
       setActiveTab("browse");
+    } else if (tabParam === 'sell') {
+      setActiveTab("sell");
+    } else if (tabParam === 'admin') {
+      setActiveTab("admin");
     }
   }, [location]);
 

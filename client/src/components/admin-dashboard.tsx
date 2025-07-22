@@ -277,14 +277,14 @@ export default function AdminDashboard() {
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold mb-4">Quick Navigation</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <Link href="/">
+            <Link href="/?tab=browse">
               <Button variant="outline" className="w-full justify-start">
                 <List className="h-4 w-4 mr-2" />
                 All Auctions
               </Button>
             </Link>
             {categories.slice(0, 3).map((category) => (
-              <Link key={category.id} href={`/?category=${category.id}`}>
+              <Link key={category.id} href={`/?category=${category.id}&tab=browse`}>
                 <Button variant="outline" className="w-full justify-start">
                   <ExternalLink className="h-4 w-4 mr-2" />
                   {category.name}
@@ -295,7 +295,7 @@ export default function AdminDashboard() {
           {categories.length > 3 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {categories.slice(3).map((category) => (
-                <Link key={category.id} href={`/?category=${category.id}`}>
+                <Link key={category.id} href={`/?category=${category.id}&tab=browse`}>
                   <Button variant="outline" className="w-full justify-start">
                     <ExternalLink className="h-4 w-4 mr-2" />
                     {category.name}
