@@ -23,7 +23,6 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
               alt={auction.title}
               className="w-full h-full object-cover"
               onError={(e) => {
-                console.log('Image failed to load:', auction.imageUrl);
                 e.currentTarget.style.display = 'none';
                 e.currentTarget.nextElementSibling?.classList.remove('hidden');
               }}
