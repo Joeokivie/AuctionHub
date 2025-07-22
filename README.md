@@ -76,7 +76,6 @@ A modern, full-stack auction platform built with React, Express, and TypeScript 
 
    The application will be available at `http://localhost:5000`
 
-## 🚀 Deployment
 
 ### Production Build
 ```bash
