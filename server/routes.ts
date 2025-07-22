@@ -118,14 +118,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auctions", requireAuth, async (req, res) => {
     try {
+      // Calculate end time based on duration
+      const { duration, ...auctionFields } = req.body;
+      const endTime = new Date(Date.now() + (duration || 7) * 24 * 60 * 60 * 1000);
+      
       const auctionData = insertAuctionSchema.parse({
-        ...req.body,
-        sellerId: currentUser.id
+        ...auctionFields,
+        sellerId: currentUser.id,
+        duration: duration || 7,
+        endTime
       });
       
       const auction = await storage.createAuction(auctionData);
       res.json(auction);
     } catch (error: any) {
+      console.error('Auction creation error:', error);
       res.status(400).json({ message: error.message || "Failed to create auction" });
     }
   });

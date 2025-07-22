@@ -10,14 +10,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertAuctionSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { CloudUpload } from "lucide-react";
+import { CloudUpload, Upload, X } from "lucide-react";
 import type { InsertAuction, Category, User } from "@shared/schema";
+import { z } from "zod";
+import { useState, useRef } from "react";
 
 type SellFormData = InsertAuction & { duration: number };
 
 export default function SellForm() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -35,11 +40,19 @@ export default function SellForm() {
     formState: { errors },
     reset,
   } = useForm<SellFormData>({
-    resolver: zodResolver(insertAuctionSchema),
+    resolver: zodResolver(insertAuctionSchema.extend({
+      startingBid: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+        message: "Starting bid must be a valid positive number"
+      }),
+      reservePrice: z.string().optional().refine(val => !val || (!isNaN(parseFloat(val)) && parseFloat(val) > 0), {
+        message: "Reserve price must be a valid positive number"
+      }),
+      categoryId: z.number().min(1, "Please select a category")
+    })),
     defaultValues: {
       title: "",
       description: "",
-      categoryId: 0,
+      categoryId: undefined,
       startingBid: "",
       reservePrice: "",
       duration: 7,
@@ -56,8 +69,11 @@ export default function SellForm() {
         description: "Your item has been listed for auction.",
       });
       reset();
+      setImageFile(null);
+      setImagePreview("");
     },
     onError: (error: any) => {
+      console.error("Auction creation failed:", error);
       toast({
         title: "Failed to create auction",
         description: error.message || "An error occurred while creating your auction.",
@@ -65,6 +81,44 @@ export default function SellForm() {
       });
     },
   });
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast({
+          title: "File too large",
+          description: "Please choose an image smaller than 10MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please choose an image file (PNG, JPG, GIF).",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const onSubmit = (data: SellFormData) => {
     if (!currentUser) {
@@ -76,9 +130,13 @@ export default function SellForm() {
       return;
     }
 
+    // For now, use the imageUrl field if no file is uploaded
+    const finalImageUrl = imagePreview || data.imageUrl || "";
+
     createAuctionMutation.mutate({
       ...data,
       sellerId: currentUser.user.id,
+      imageUrl: finalImageUrl,
     });
   };
 
@@ -238,22 +296,53 @@ export default function SellForm() {
               )}
             </div>
 
-            {/* Image Upload Area (Visual Only) */}
+            {/* Image Upload Area */}
             <div>
               <Label>Item Photos</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <CloudUpload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">Drag and drop your images here, or</p>
-                <Button type="button" variant="link" className="text-blue-600 hover:text-blue-700 font-medium">
-                  browse files
-                </Button>
-                <p className="text-sm text-gray-500 mt-2">
-                  PNG, JPG, GIF up to 10MB each (max 8 photos)
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Note: For now, please use the Image URL field above
-                </p>
-              </div>
+              {imagePreview ? (
+                <div className="border-2 border-gray-300 rounded-lg p-4">
+                  <div className="relative">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="max-w-full h-48 object-cover mx-auto rounded-lg"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={removeImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2 text-center">
+                    {imageFile?.name}
+                  </p>
+                </div>
+              ) : (
+                <div 
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <CloudUpload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">Drag and drop your images here, or</p>
+                  <Button type="button" variant="link" className="text-blue-600 hover:text-blue-700 font-medium">
+                    browse files
+                  </Button>
+                  <p className="text-sm text-gray-500 mt-2">
+                    PNG, JPG, GIF up to 10MB
+                  </p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
             </div>
 
             {/* Submit Button */}
