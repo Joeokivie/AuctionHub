@@ -3,49 +3,15 @@ import CountdownTimer from "./countdown-timer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Gavel, Tag, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import type { AuctionWithDetails, User } from "@shared/schema";
+import { Gavel, Tag } from "lucide-react";
+import type { AuctionWithDetails } from "@shared/schema";
 
 interface AuctionCardProps {
   auction: AuctionWithDetails;
-  currentUser?: User | null;
 }
 
-export default function AuctionCard({ auction, currentUser }: AuctionCardProps) {
+export default function AuctionCard({ auction }: AuctionCardProps) {
   const isAuctionEnded = new Date() > new Date(auction.endTime);
-  const isOwner = currentUser?.id === auction.sellerId;
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const deleteMutation = useMutation({
-    mutationFn: () => apiRequest(`/api/auctions/${auction.id}`, 'DELETE'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
-      toast({
-        title: "Success",
-        description: "Auction deleted successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete auction",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (confirm("Are you sure you want to delete this auction? This action cannot be undone.")) {
-      deleteMutation.mutate();
-    }
-  };
 
   return (
     <Card className="auction-card hover:shadow-lg transition-shadow cursor-pointer">
@@ -114,29 +80,14 @@ export default function AuctionCard({ auction, currentUser }: AuctionCardProps) 
             )}
           </div>
           
-          <div className="flex items-center space-x-2">
-            {!isAuctionEnded && !isOwner && (
-              <Link href={`/auction/${auction.id}`}>
-                <Button size="sm" className="bg-red-600 hover:bg-red-700">
-                  <Gavel className="h-4 w-4 mr-1" />
-                  Bid Now
-                </Button>
-              </Link>
-            )}
-            
-            {isOwner && (
-              <Button 
-                size="sm" 
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending || auction.bidCount > 0}
-                title={auction.bidCount > 0 ? "Cannot delete auction with existing bids" : "Delete auction"}
-              >
-                <Trash2 className="h-4 w-4" />
-                {deleteMutation.isPending ? "..." : "Delete"}
+          {!isAuctionEnded && (
+            <Link href={`/auction/${auction.id}`}>
+              <Button size="sm" className="bg-red-600 hover:bg-red-700">
+                <Gavel className="h-4 w-4 mr-1" />
+                Bid Now
               </Button>
-            )}
-          </div>
+            </Link>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -295,7 +295,6 @@ export default function Home() {
                       <AuctionCard 
                         key={auction.id} 
                         auction={auction} 
-                        currentUser={currentUserData?.user} 
                       />
                     ))}
                   </div>

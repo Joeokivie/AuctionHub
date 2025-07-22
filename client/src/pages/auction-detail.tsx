@@ -1,5 +1,5 @@
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Header from "@/components/header";
 import BidModal from "@/components/bid-modal";
 import CountdownTimer from "@/components/countdown-timer";
@@ -8,13 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
-import { Clock, User, Tag, Calendar, Gavel } from "lucide-react";
+import { Clock, User, Tag, Calendar, Gavel, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useCurrentUser } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 import type { AuctionWithDetails, Bid, User as UserType } from "@shared/schema";
 
 export default function AuctionDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const [showBidModal, setShowBidModal] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: currentUserData } = useCurrentUser();
 
   const { data: auction, isLoading } = useQuery<AuctionWithDetails>({
     queryKey: ["/api/auctions", id],
@@ -63,6 +69,32 @@ export default function AuctionDetail() {
   }
 
   const isAuctionEnded = new Date() > new Date(auction.endTime);
+  const isOwner = currentUserData?.user?.id === auction.sellerId;
+
+  const deleteMutation = useMutation({
+    mutationFn: () => apiRequest(`/api/auctions/${auction.id}`, 'DELETE'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
+      toast({
+        title: "Success",
+        description: "Auction deleted successfully",
+      });
+      setLocation("/"); // Redirect to home page
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete auction",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = () => {
+    if (confirm("Are you sure you want to delete this auction? This action cannot be undone.")) {
+      deleteMutation.mutate();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -147,14 +179,35 @@ export default function AuctionDetail() {
                   </div>
 
                   {!isAuctionEnded && (
-                    <Button 
-                      onClick={() => setShowBidModal(true)}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white"
-                      size="lg"
-                    >
-                      <Gavel className="h-5 w-5 mr-2" />
-                      Place Bid
-                    </Button>
+                    <>
+                      {isOwner ? (
+                        <Button 
+                          onClick={handleDelete}
+                          variant="destructive"
+                          className="w-full"
+                          size="lg"
+                          disabled={deleteMutation.isPending || auction.bidCount > 0}
+                        >
+                          <Trash2 className="h-5 w-5 mr-2" />
+                          {deleteMutation.isPending ? "Deleting..." : "Delete Auction"}
+                        </Button>
+                      ) : (
+                        <Button 
+                          onClick={() => setShowBidModal(true)}
+                          className="w-full bg-red-600 hover:bg-red-700 text-white"
+                          size="lg"
+                        >
+                          <Gavel className="h-5 w-5 mr-2" />
+                          Place Bid
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  
+                  {isOwner && auction.bidCount > 0 && (
+                    <p className="text-sm text-gray-500 mt-2 text-center">
+                      Cannot delete auction with existing bids
+                    </p>
                   )}
                 </div>
               </CardContent>
