@@ -108,8 +108,8 @@ export default function Home() {
           <div className="flex items-center space-x-8 py-3 overflow-x-auto">
             <button
               onClick={() => handleCategoryClick("")}
-              className={`whitespace-nowrap text-sm font-medium hover:text-blue-600 ${
-                !selectedCategory ? "text-gray-900" : "text-gray-600"
+              className={`whitespace-nowrap text-sm font-medium hover:text-blue-600 px-2 py-1 rounded ${
+                !selectedCategory ? "text-blue-600 font-semibold bg-blue-50 border border-blue-200" : "text-gray-600"
               }`}
             >
               All Categories
@@ -118,8 +118,8 @@ export default function Home() {
               <button
                 key={category.id}
                 onClick={() => handleCategoryClick(category.name)}
-                className={`whitespace-nowrap text-sm font-medium hover:text-blue-600 ${
-                  selectedCategory === category.id.toString() ? "text-gray-900" : "text-gray-600"
+                className={`whitespace-nowrap text-sm font-medium hover:text-blue-600 px-2 py-1 rounded ${
+                  selectedCategory === category.id.toString() ? "text-blue-600 font-semibold bg-blue-50 border border-blue-200" : "text-gray-600"
                 }`}
               >
                 {category.name}
@@ -168,9 +168,25 @@ export default function Home() {
 
         {/* Browse Auctions Tab */}
         {activeTab === "browse" && (
-          <div className="flex gap-8">
-            {/* Filter Sidebar */}
-            <aside className="w-64 flex-shrink-0">
+          <div className="space-y-4">
+            {/* Show selected category info */}
+            {selectedCategory && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 font-medium">
+                  Showing auctions in: {categories.find(c => c.id.toString() === selectedCategory)?.name || 'Unknown Category'}
+                  <button 
+                    onClick={() => handleCategoryClick("")}
+                    className="ml-2 text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Clear filter
+                  </button>
+                </p>
+              </div>
+            )}
+            
+            <div className="flex gap-8">
+              {/* Filter Sidebar */}
+              <aside className="w-64 flex-shrink-0">
               <Card>
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-lg mb-4">Filters</h3>
@@ -307,6 +323,7 @@ export default function Home() {
                   )}
                 </>
               )}
+            </div>
             </div>
           </div>
         )}
