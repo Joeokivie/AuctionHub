@@ -60,6 +60,6 @@ A sophisticated eBay-like auction platform built with modern web technologies fo
 1. **Clone the repository**
    ```bash
    git clone <your-repo-url>
-   cd auction-platform
+
 ## Deployment
 https://auction-hub-josephokivie95.replit.app/
