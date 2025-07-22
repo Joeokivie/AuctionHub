@@ -64,14 +64,6 @@ A modern, full-stack auction platform built with React, Express, and TypeScript 
    npm install
    ```
 
-3. **Set up environment variables**
-   Create a `.env` file with:
-   ```env
-   DATABASE_URL=your_postgresql_connection_string
-   NODE_ENV=development
-   PORT=5000
-   ```
-
 4. **Set up the database**
    ```bash
    npm run db:push
@@ -92,30 +84,7 @@ npm run build
 npm start
 ```
 
-### Environment Setup
-- Ensure PostgreSQL database is provisioned
-- Set `NODE_ENV=production`
-- Configure `DATABASE_URL` for production database
 
-## 📁 Project Structure
-
-```
-├── client/                 # Frontend React application
-│   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/         # Application pages
-│   │   ├── hooks/         # Custom React hooks
-│   │   └── lib/           # Utility functions
-├── server/                # Backend Express application
-│   ├── routes.ts          # API routes
-│   ├── storage.ts         # Database operations
-│   ├── db.ts             # Database configuration
-│   └── utils/            # Backend utilities
-├── shared/               # Shared TypeScript types
-│   └── schema.ts         # Database schema and validation
-├── uploads/              # User-uploaded images
-└── data/                # Application data and backups
-```
 
 ## 🔧 Available Scripts
 
@@ -176,3 +145,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Responsive design ensures great user experience across devices
 - Comprehensive admin features for platform management
 - Real-time updates for engaging auction experience
+
+## Deployment
+https://auction-hub-1-josephokivie95.replit.app/
