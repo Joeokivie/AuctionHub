@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Clock, User, Tag, Calendar, Gavel, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentUser } from "@/lib/auth";
@@ -39,7 +39,10 @@ export default function AuctionDetail() {
         title: "Success",
         description: "Auction deleted successfully",
       });
-      setLocation("/"); // Redirect to home page
+      // Use setTimeout to ensure the redirect happens after the current render cycle
+      setTimeout(() => {
+        setLocation("/");
+      }, 100);
     },
     onError: (error: any) => {
       toast({
@@ -50,11 +53,11 @@ export default function AuctionDetail() {
     },
   });
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (confirm("Are you sure you want to delete this auction? This action cannot be undone.")) {
       deleteMutation.mutate();
     }
-  };
+  }, [deleteMutation]);
 
   if (isLoading) {
     return (
