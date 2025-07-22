@@ -41,18 +41,19 @@ export default function SellForm() {
     reset,
   } = useForm<SellFormData>({
     resolver: zodResolver(insertAuctionSchema.extend({
-      startingBid: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+      startingBid: z.string().min(1, "Starting bid is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
         message: "Starting bid must be a valid positive number"
       }),
       reservePrice: z.string().optional().refine(val => !val || (!isNaN(parseFloat(val)) && parseFloat(val) > 0), {
         message: "Reserve price must be a valid positive number"
       }),
-      categoryId: z.number().min(1, "Please select a category")
+      categoryId: z.number().min(1, "Please select a category"),
+      title: z.string().min(1, "Title is required"),
+      description: z.string().min(1, "Description is required")
     })),
     defaultValues: {
       title: "",
       description: "",
-      categoryId: undefined,
       startingBid: "",
       reservePrice: "",
       duration: 7,
@@ -121,6 +122,9 @@ export default function SellForm() {
   };
 
   const onSubmit = (data: SellFormData) => {
+    console.log("Form submitted with data:", data);
+    console.log("Form errors:", errors);
+    
     if (!currentUser) {
       toast({
         title: "Please log in",
@@ -133,11 +137,14 @@ export default function SellForm() {
     // For now, use the imageUrl field if no file is uploaded
     const finalImageUrl = imagePreview || data.imageUrl || "";
 
-    createAuctionMutation.mutate({
+    const submitData = {
       ...data,
       sellerId: currentUser.user.id,
       imageUrl: finalImageUrl,
-    });
+    };
+    
+    console.log("Submitting to API:", submitData);
+    createAuctionMutation.mutate(submitData);
   };
 
   if (!currentUser) {
@@ -163,6 +170,18 @@ export default function SellForm() {
       <Card>
         <CardContent className="p-8">
           <h2 className="text-2xl font-bold mb-6">List Your Item for Auction</h2>
+          
+          {/* Debug Info */}
+          {Object.keys(errors).length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <h3 className="text-red-800 font-medium mb-2">Form Errors:</h3>
+              <ul className="text-red-700 text-sm space-y-1">
+                {Object.entries(errors).map(([field, error]) => (
+                  <li key={field}>• {field}: {error?.message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Item Title */}
