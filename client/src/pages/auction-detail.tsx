@@ -31,6 +31,31 @@ export default function AuctionDetail() {
     enabled: !!id,
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => apiRequest(`/api/auctions/${id}`, 'DELETE'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
+      toast({
+        title: "Success",
+        description: "Auction deleted successfully",
+      });
+      setLocation("/"); // Redirect to home page
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete auction",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = () => {
+    if (confirm("Are you sure you want to delete this auction? This action cannot be undone.")) {
+      deleteMutation.mutate();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -71,31 +96,6 @@ export default function AuctionDetail() {
   const isAuctionEnded = new Date() > new Date(auction.endTime);
   const isOwner = currentUserData?.user?.id === auction.sellerId;
 
-  const deleteMutation = useMutation({
-    mutationFn: () => apiRequest(`/api/auctions/${auction.id}`, 'DELETE'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
-      toast({
-        title: "Success",
-        description: "Auction deleted successfully",
-      });
-      setLocation("/"); // Redirect to home page
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete auction",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this auction? This action cannot be undone.")) {
-      deleteMutation.mutate();
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -110,50 +110,46 @@ export default function AuctionDetail() {
                   src={auction.imageUrl} 
                   alt={auction.title}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
                 />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <Tag className="h-24 w-24" />
-                </div>
-              )}
+              ) : null}
+              <div className={`w-full h-full flex items-center justify-center text-gray-400 ${auction.imageUrl ? 'hidden' : ''}`}>
+                <Tag className="h-24 w-24" />
+              </div>
             </div>
           </div>
 
-          {/* Details Section */}
+          {/* Auction Info */}
           <div className="space-y-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary">{auction.category.name}</Badge>
-                {isAuctionEnded && <Badge variant="destructive">Ended</Badge>}
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{auction.title}</h1>
-              <p className="text-gray-600 text-lg">{auction.description}</p>
-            </div>
-
-            {/* Seller Info */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-3">
-                  <Avatar>
-                    <AvatarFallback>
-                      {auction.seller.firstName[0]}{auction.seller.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">
-                      {auction.seller.firstName} {auction.seller.lastName}
-                    </p>
-                    <p className="text-sm text-gray-500">Seller</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Bidding Section */}
             <Card>
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
+                  <div>
+                    <Badge variant="outline" className="mb-2">
+                      {auction.category.name}
+                    </Badge>
+                    {isAuctionEnded && (
+                      <Badge variant="destructive" className="ml-2">
+                        Ended
+                      </Badge>
+                    )}
+                    <h1 className="text-3xl font-bold text-gray-900 mt-2">
+                      {auction.title}
+                    </h1>
+                    <p className="text-gray-600 mt-3">
+                      {auction.description}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <User className="h-4 w-4" />
+                    <span>Seller: {auction.seller.firstName} {auction.seller.lastName}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-4 border-y">
                     <div>
                       <p className="text-sm text-gray-500">Current Bid</p>
                       <p className="text-3xl font-bold text-red-600">
@@ -281,7 +277,8 @@ export default function AuctionDetail() {
         )}
       </main>
 
-      <BidModal 
+      {/* Bid Modal */}
+      <BidModal
         isOpen={showBidModal}
         onClose={() => setShowBidModal(false)}
         auction={auction}
